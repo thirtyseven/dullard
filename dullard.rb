@@ -10,8 +10,8 @@ class Dullard::Workbook
   end
 
   def sheets
-    @workbook = Nokogiri::XML::Document.parse(@zipfs.file.open("xl/workbook.xml"))
-    @sheets = @workbook.css("sheet").map {|n| Dullard::Sheet.new(self, n.attr("name"), n.attr("sheetId")) }
+    workbook = Nokogiri::XML::Document.parse(@zipfs.file.open("xl/workbook.xml"))
+    @sheets = workbook.css("sheet").map {|n| Dullard::Sheet.new(self, n.attr("name"), n.attr("sheetId")) }
   end
 
   def string_table
@@ -41,6 +41,7 @@ class Dullard::Workbook
 end
 
 class Dullard::Sheet
+  attr_reader :name, :workbook
   def initialize(workbook, name, id)
     @workbook = workbook
     @name = name
@@ -54,32 +55,28 @@ class Dullard::Sheet
   def rows
     Enumerator.new do |y|
       state = :top
-      row = nil
+      shared = false
+      row = []
       Nokogiri::XML::Reader(@workbook.zipfs.file.open("xl/worksheets/sheet#{@id}.xml")).each do |node|
         case state
         when :top
           if node.name == "row"
             state = :row 
-            y << row unless row.nil?
-            row = []
           end
         when :row
           if node.name == "row"
             y << row
             row = []
-          elsif node.attribute("t") == "s"
-            state = :cell_shared
           else
             state = :cell
+            shared = (node.attribute("t") == "s")
           end
-        when :cell_shared
-          row << string_lookup(node.value.to_i)
-          state = :row
         when :cell
-          row << node.value
+          row << (shared ? string_lookup(node.value.to_i) : node.value)
           state = :row
         end
       end
+      y << row
     end
   end
 end
