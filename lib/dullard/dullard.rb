@@ -20,16 +20,15 @@ class Dullard::Workbook
 
   def read_string_table
     @string_table = []
-    state = :top
+    state = :entry
+    entry = ''
     Nokogiri::XML::Reader(@zipfs.file.open("xl/sharedStrings.xml")).each do |node|
-      case state
-      when :top
-        if node.name == "t"
-          state = :entry
-        end
-      when :entry
-        @string_table << node.value
-        state = :top
+      if node.name == "si" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
+        entry = ''
+      elsif node.name == "si" and node.node_type == Nokogiri::XML::Reader::TYPE_END_ELEMENT
+        @string_table << entry
+      elsif node.value?
+        entry << node.value
       end
     end
     @string_table
@@ -56,27 +55,18 @@ class Dullard::Sheet
     Enumerator.new do |y|
       state = :top
       shared = false
-      row = []
+      row = nil
       Nokogiri::XML::Reader(@workbook.zipfs.file.open("xl/worksheets/sheet#{@id}.xml")).each do |node|
-        case state
-        when :top
-          if node.name == "row"
-            state = :row 
-          end
-        when :row
-          if node.name == "row"
-            y << row
-            row = []
-          else
-            state = :cell
+        if node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
+          row = []
+        elsif node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_END_ELEMENT
+          y << row
+        elsif node.name == "c" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
             shared = (node.attribute("t") == "s")
-          end
-        when :cell
-          row << (shared ? string_lookup(node.value.to_i) : node.value)
-          state = :row
+        elsif node.value?
+            row << (shared ? string_lookup(node.value.to_i) : node.value)
         end
       end
-      y << row
     end
   end
 end
