@@ -20,16 +20,16 @@ class Dullard::Workbook
 
   def read_string_table
     @string_table = []
-    state = 0
+    state = :top
     Nokogiri::XML::Reader(@zipfs.file.open("xl/sharedStrings.xml")).each do |node|
       case state
-      when 0
+      when :top
         if node.name == "t"
-          state = 1
+          state = :entry
         end
-      when 1
+      when :entry
         @string_table << node.value
-        state = 0
+        state = :top
       end
     end
     @string_table
