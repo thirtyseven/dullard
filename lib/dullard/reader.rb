@@ -20,7 +20,6 @@ class Dullard::Workbook
 
   def read_string_table
     @string_table = []
-    state = :entry
     entry = ''
     Nokogiri::XML::Reader(@zipfs.file.open("xl/sharedStrings.xml")).each do |node|
       if node.name == "si" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
@@ -36,6 +35,10 @@ class Dullard::Workbook
 
   def zipfs
     @zipfs
+  end
+
+  def close
+    @zipfs.close
   end
 end
 
@@ -53,7 +56,6 @@ class Dullard::Sheet
 
   def rows
     Enumerator.new do |y|
-      state = :top
       shared = false
       row = nil
       Nokogiri::XML::Reader(@workbook.zipfs.file.open("xl/worksheets/sheet#{@id}.xml")).each do |node|

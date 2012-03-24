@@ -1,4 +1,4 @@
-require './dullard'
+require 'dullard'
 
 describe "dullard" do
   before(:each) do
