@@ -11,7 +11,7 @@ class Dullard::Workbook
 
   def sheets
     workbook = Nokogiri::XML::Document.parse(@zipfs.file.open("xl/workbook.xml"))
-    @sheets = workbook.css("sheet").map {|n| Dullard::Sheet.new(self, n.attr("name"), n.attr("sheetId")) }
+    @sheets = workbook.css("sheet").each_with_index.map {|n,i| Dullard::Sheet.new(self, n.attr("name"), n.attr("sheetId"), i+1) }
   end
 
   def string_table
@@ -44,10 +44,11 @@ end
 
 class Dullard::Sheet
   attr_reader :name, :workbook
-  def initialize(workbook, name, id)
+  def initialize(workbook, name, id, index)
     @workbook = workbook
     @name = name
     @id = id
+    @index = index
   end
 
   def string_lookup(i)
@@ -58,7 +59,7 @@ class Dullard::Sheet
     Enumerator.new do |y|
       shared = false
       row = nil
-      Nokogiri::XML::Reader(@workbook.zipfs.file.open("xl/worksheets/sheet#{@id}.xml")).each do |node|
+      Nokogiri::XML::Reader(@workbook.zipfs.file.open("xl/worksheets/sheet#{@index}.xml")).each do |node|
         if node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
           row = []
         elsif node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_END_ELEMENT
@@ -68,7 +69,7 @@ class Dullard::Sheet
         elsif node.value?
             row << (shared ? string_lookup(node.value.to_i) : node.value)
         end
-      end
+      end if @workbook.zipfs.file.exist?("xl/worksheets/sheet#{@index}.xml")
     end
   end
 end
