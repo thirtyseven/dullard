@@ -59,7 +59,7 @@ class Dullard::Sheet
     Enumerator.new do |y|
       shared = false
       row = nil
-      Nokogiri::XML::Reader(@workbook.zipfs.file.open("xl/worksheets/sheet#{@index}.xml")).each do |node|
+      Nokogiri::XML::Reader(@workbook.zipfs.file.open(path)).each do |node|
         if node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
           row = []
         elsif node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_END_ELEMENT
@@ -69,8 +69,13 @@ class Dullard::Sheet
         elsif node.value?
             row << (shared ? string_lookup(node.value.to_i) : node.value)
         end
-      end if @workbook.zipfs.file.exist?("xl/worksheets/sheet#{@index}.xml")
+      end if @workbook.zipfs.file.exist?(path)
     end
+  end
+
+  private
+  def path
+    "xl/worksheets/sheet#{@index}.xml"
   end
 end
 
