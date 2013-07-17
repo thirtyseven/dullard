@@ -60,14 +60,24 @@ class Dullard::Sheet
       shared = false
       row = nil
       Nokogiri::XML::Reader(@workbook.zipfs.file.open(path)).each do |node|
-        if node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
-          row = []
-        elsif node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_END_ELEMENT
-          y << row
-        elsif node.name == "c" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
+        case node.node_type
+        when Nokogiri::XML::Reader::TYPE_ELEMENT
+          case node.name
+          when "row"
+            row = []
+            next
+          when "c"
             shared = (node.attribute("t") == "s")
-        elsif node.value?
-            row << (shared ? string_lookup(node.value.to_i) : node.value)
+            next
+          end
+        when Nokogiri::XML::Reader::TYPE_END_ELEMENT
+          if node.name == "row"
+            y << row
+            next
+          end
+        end
+        if value = node.value
+          row << (shared ? string_lookup(value.to_i) : value)
         end
       end if @workbook.zipfs.file.exist?(path)
     end
