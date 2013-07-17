@@ -49,6 +49,7 @@ class Dullard::Sheet
     @name = name
     @id = id
     @index = index
+    @file = @workbook.zipfs.file.open(path) if @workbook.zipfs.file.exist?(path)
   end
 
   def string_lookup(i)
@@ -56,10 +57,12 @@ class Dullard::Sheet
   end
 
   def rows
-    Enumerator.new do |y|
+    Enumerator.new(rows_size) do |y|
+      next unless @file
+      @file.rewind
       shared = false
       row = nil
-      Nokogiri::XML::Reader(@workbook.zipfs.file.open(path)).each do |node|
+      Nokogiri::XML::Reader(@file).each do |node|
         case node.node_type
         when Nokogiri::XML::Reader::TYPE_ELEMENT
           case node.name
@@ -79,13 +82,33 @@ class Dullard::Sheet
         if value = node.value
           row << (shared ? string_lookup(value.to_i) : value)
         end
-      end if @workbook.zipfs.file.exist?(path)
+      end
     end
   end
 
   private
   def path
     "xl/worksheets/sheet#{@index}.xml"
+  end
+
+  def rows_size
+    if defined? @rows_size
+      @rows_size
+    elsif @file
+      @file.rewind
+      Nokogiri::XML::Reader(@file).each do |node|
+        if node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
+          case node.name
+          when "dimension"
+            if ref = node.attributes["ref"]
+              break @rows_size = ref.scan(/\d+$/).first.to_i
+            end
+          when "sheetData"
+            break @rows_size = nil
+          end
+        end
+      end
+    end
   end
 end
 

@@ -24,4 +24,8 @@ describe "dullard" do
     end
     count.should == 115
   end
+
+  it "reads the right number of rows from the metadata" do
+    @xlsx.sheets[0].rows.size.should == 115
+  end
 end
