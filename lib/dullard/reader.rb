@@ -62,15 +62,25 @@ class Dullard::Sheet
       @file.rewind
       shared = false
       row = nil
+      column = nil
       Nokogiri::XML::Reader(@file).each do |node|
         case node.node_type
         when Nokogiri::XML::Reader::TYPE_ELEMENT
           case node.name
           when "row"
             row = []
+            column = 0
             next
           when "c"
+            if rcolumn = node.attributes["r"]
+              rcolumn.delete!("0-9")
+              while column < self.class.column_names.size and rcolumn != self.class.column_names[column]
+                row << nil
+                column += 1
+              end
+            end
             shared = (node.attribute("t") == "s")
+            column += 1
             next
           end
         when Nokogiri::XML::Reader::TYPE_END_ELEMENT
@@ -83,6 +93,21 @@ class Dullard::Sheet
           row << (shared ? string_lookup(value.to_i) : value)
         end
       end
+    end
+  end
+
+  # Returns A to ZZZ.
+  def self.column_names
+    if @column_names
+      @column_names
+    else
+      proc = Proc.new do |l|
+        ("#{l}A".."#{l}Z").to_a
+      end
+      x = proc.call(nil)
+      y = x.map(&proc).flatten
+      z = y.map(&proc).flatten
+      @column_names = x + y + z
     end
   end
 
@@ -111,4 +136,3 @@ class Dullard::Sheet
     end
   end
 end
-
