@@ -72,7 +72,8 @@ class Dullard::Sheet
             column = 0
             next
           when "c"
-            if rcolumn = node.attributes["r"]
+            rcolumn = node.attributes["r"]
+            if rcolumn
               rcolumn.delete!("0-9")
               while column < self.class.column_names.size and rcolumn != self.class.column_names[column]
                 row << nil
@@ -89,7 +90,8 @@ class Dullard::Sheet
             next
           end
         end
-        if value = node.value
+        value = node.value
+        if value
           row << (shared ? string_lookup(value.to_i) : value)
         end
       end
@@ -101,10 +103,10 @@ class Dullard::Sheet
     if @column_names
       @column_names
     else
-      proc = Proc.new do |l|
-        ("#{l}A".."#{l}Z").to_a
+      proc = Proc.new do |prev|
+        ("#{prev}A".."#{prev}Z").to_a
       end
-      x = proc.call(nil)
+      x = proc.call("")
       y = x.map(&proc).flatten
       z = y.map(&proc).flatten
       @column_names = x + y + z
