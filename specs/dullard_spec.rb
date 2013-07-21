@@ -2,7 +2,7 @@ require 'dullard'
 
 describe "dullard" do
   before(:each) do
-    @file = File.open("SHAPE5_CorePrePost.xlsx")
+    @file = File.open(File.expand_path("../test.xlsx", __FILE__))
     @xlsx = Dullard::Workbook.new @file
   end
   it "can open a file" do
@@ -13,8 +13,11 @@ describe "dullard" do
     @xlsx.sheets.count.should == 1
   end
 
-  it "can read rows" do
-    @xlsx.sheets[0].rows.first.count.should >= 300
+  it "reads the right number of columns, even with blanks" do
+    rows = @xlsx.sheets[0].rows
+    rows.next.count.should == 300
+    rows.next.count.should == 9
+    rows.next.count.should == 1
   end
 
   it "reads the right number of rows" do
@@ -23,5 +26,9 @@ describe "dullard" do
       count += 1
     end
     count.should == 115
+  end
+
+  it "reads the right number of rows from the metadata" do
+    @xlsx.sheets[0].rows.size.should == 115
   end
 end

@@ -49,6 +49,7 @@ class Dullard::Sheet
     @name = name
     @id = id
     @index = index
+    @file = @workbook.zipfs.file.open(path) if @workbook.zipfs.file.exist?(path)
   end
 
   def string_lookup(i)
@@ -56,20 +57,57 @@ class Dullard::Sheet
   end
 
   def rows
-    Enumerator.new do |y|
+    Enumerator.new(rows_size) do |y|
+      next unless @file
+      @file.rewind
       shared = false
       row = nil
-      Nokogiri::XML::Reader(@workbook.zipfs.file.open(path)).each do |node|
-        if node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
-          row = []
-        elsif node.name == "row" and node.node_type == Nokogiri::XML::Reader::TYPE_END_ELEMENT
-          y << row
-        elsif node.name == "c" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
+      column = nil
+      Nokogiri::XML::Reader(@file).each do |node|
+        case node.node_type
+        when Nokogiri::XML::Reader::TYPE_ELEMENT
+          case node.name
+          when "row"
+            row = []
+            column = 0
+            next
+          when "c"
+            if rcolumn = node.attributes["r"]
+              rcolumn.delete!("0-9")
+              while column < self.class.column_names.size and rcolumn != self.class.column_names[column]
+                row << nil
+                column += 1
+              end
+            end
             shared = (node.attribute("t") == "s")
-        elsif node.value?
-            row << (shared ? string_lookup(node.value.to_i) : node.value)
+            column += 1
+            next
+          end
+        when Nokogiri::XML::Reader::TYPE_END_ELEMENT
+          if node.name == "row"
+            y << row
+            next
+          end
         end
-      end if @workbook.zipfs.file.exist?(path)
+        if value = node.value
+          row << (shared ? string_lookup(value.to_i) : value)
+        end
+      end
+    end
+  end
+
+  # Returns A to ZZZ.
+  def self.column_names
+    if @column_names
+      @column_names
+    else
+      proc = Proc.new do |l|
+        ("#{l}A".."#{l}Z").to_a
+      end
+      x = proc.call(nil)
+      y = x.map(&proc).flatten
+      z = y.map(&proc).flatten
+      @column_names = x + y + z
     end
   end
 
@@ -77,5 +115,24 @@ class Dullard::Sheet
   def path
     "xl/worksheets/sheet#{@index}.xml"
   end
-end
 
+  def rows_size
+    if defined? @rows_size
+      @rows_size
+    elsif @file
+      @file.rewind
+      Nokogiri::XML::Reader(@file).each do |node|
+        if node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
+          case node.name
+          when "dimension"
+            if ref = node.attributes["ref"]
+              break @rows_size = ref.scan(/\d+$/).first.to_i
+            end
+          when "sheetData"
+            break @rows_size = nil
+          end
+        end
+      end
+    end
+  end
+end
