@@ -6,6 +6,7 @@ Gem::Specification.new do |gem|
   gem.email         = ["ted@shlashdot.org"]
   gem.summary       = %q{A fast XLSX parser using Nokogiri}
   gem.homepage      = "http://github.com/thirtyseven/dullard"
+  gem.license       = "MIT"
 
   gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   gem.files         = `git ls-files`.split("\n")
