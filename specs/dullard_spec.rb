@@ -25,10 +25,22 @@ describe "dullard" do
     @xlsx.sheets[0].rows.each do |row|
       count += 1
     end
-    count.should == 115
+    count.should == 116
   end
 
   it "reads the right number of rows from the metadata when present" do
-    @xlsx.sheets[0].rows.size.should == 115
+    @xlsx.sheets[0].rows.size.should == 116
+  end
+
+  it "reads date/time properly" do
+    count = 0
+    @xlsx.sheets[0].rows.each do |row|
+      count += 1
+
+      if count == 116
+        row.should == ["2012-10-20 00:00:00", "2012-10-20 00:17:58", "2012-07-03 21:18:48", "2012-07-03 21:18:52"]
+      end
+    end
+
   end
 end
