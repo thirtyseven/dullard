@@ -63,6 +63,7 @@ class Dullard::Sheet
       shared = false
       row = nil
       column = nil
+      cell_type = nil
       Nokogiri::XML::Reader(@file).each do |node|
         case node.node_type
         when Nokogiri::XML::Reader::TYPE_ELEMENT
@@ -72,6 +73,10 @@ class Dullard::Sheet
             column = 0
             next
           when "c"
+            if node.attributes['s'] && node.attributes['s'] == "1"
+              cell_type = 'date'
+            end
+
             rcolumn = node.attributes["r"]
             if rcolumn
               rcolumn.delete!("0-9")
@@ -91,7 +96,13 @@ class Dullard::Sheet
           end
         end
         value = node.value
+
         if value
+          case cell_type
+          when 'date'
+            value = (Date.parse('1900-01-01') + value.to_f).strftime("%Y-%m-%d %H:%M:%S") # Date conversion
+          end
+
           row << (shared ? string_lookup(value.to_i) : value)
         end
       end
