@@ -1,12 +1,85 @@
 require 'zip/zipfilesystem'
 require 'nokogiri'
+require 'pp'
 
 module Dullard; end
 
 class Dullard::Workbook
-  def initialize(file)
+FORMATS = {
+    'general' => :float,
+    '0' => :float,
+    '0.00' => :float,
+    '#,##0' => :float,
+    '#,##0.00' => :float,
+    '0%' => :percentage,
+    '0.00%' => :percentage,
+    '0.00E+00' => :float,
+    '# ?/?' => :float, #??? TODO:
+    '# ??/??' => :float, #??? TODO:
+    'mm-dd-yy' => :date,
+    'd-mmm-yy' => :date,
+    'd-mmm' => :date,
+    'mmm-yy' => :date,
+    'h:mm am/pm' => :date,
+    'h:mm:ss am/pm' => :date,
+    'h:mm' => :time,
+    'h:mm:ss' => :time,
+    'm/d/yy h:mm' => :date,
+    '#,##0 ;(#,##0)' => :float,
+    '#,##0 ;[red](#,##0)' => :float,
+    '#,##0.00;(#,##0.00)' => :float,
+    '#,##0.00;[red](#,##0.00)' => :float,
+    'mm:ss' => :time,
+    '[h]:mm:ss' => :time,
+    'mmss.0' => :time,
+    '##0.0e+0' => :float,
+    '@' => :float,
+    #-- zusaetzliche Formate, die nicht standardmaessig definiert sind:
+    "yyyy\\-mm\\-dd" => :date,
+    'dd/mm/yy' => :date,
+    'hh:mm:ss' => :time,
+    "dd/mm/yy\\ hh:mm" => :datetime,
+    'm/d/yy' => :date,
+    'mm/dd/yy' => :date,
+    'mm/dd/yyyy' => :date,
+  }
+
+  STANDARD_FORMATS = { 
+    0 => 'General',
+    1 => '0',
+    2 => '0.00',
+    3 => '#,##0',
+    4 => '#,##0.00',
+    9 => '0%',
+    10 => '0.00%',
+    11 => '0.00E+00',
+    12 => '# ?/?',
+    13 => '# ??/??',
+    14 => 'mm-dd-yy',
+    15 => 'd-mmm-yy',
+    16 => 'd-mmm',
+    17 => 'mmm-yy',
+    18 => 'h:mm AM/PM',
+    19 => 'h:mm:ss AM/PM',
+    20 => 'h:mm',
+    21 => 'h:mm:ss',
+    22 => 'm/d/yy h:mm',
+    37 => '#,##0 ;(#,##0)',
+    38 => '#,##0 ;[Red](#,##0)',
+    39 => '#,##0.00;(#,##0.00)',
+    40 => '#,##0.00;[Red](#,##0.00)',
+    45 => 'mm:ss',
+    46 => '[h]:mm:ss',
+    47 => 'mmss.0',
+    48 => '##0.0E+0',
+    49 => '@',
+  }
+
+  def initialize(file, user_defined_formats = {})
     @file = file
     @zipfs = Zip::ZipFile.open(@file)
+    @user_defined_formats = user_defined_formats
+    read_styles
   end
 
   def sheets
@@ -31,6 +104,51 @@ class Dullard::Workbook
       end
     end
     @string_table
+  end
+
+  def read_styles
+    doc = Nokogiri::XML(@zipfs.file.open("xl/styles.xml"))
+    
+    @numFmts = {}
+    @cellXfs = []
+    fonts = []
+    
+    doc.css('/styleSheet/numFmts/numFmt').each do |numFmt|
+      numFmtId = numFmt.attributes['numFmtId'].value.to_i
+      formatCode = numFmt.attributes['formatCode'].value
+      @numFmts[numFmtId] = formatCode
+    end
+
+    doc.css('/styleSheet/cellXfs/xf').each do |xf|
+      numFmtId = xf.attributes['numFmtId'].value.to_i
+      @cellXfs << numFmtId
+    end
+
+    return @numFmts, @cellXfs
+  end
+
+  # convert internal excelx attribute to a format
+  def attribute2format(s)
+    id = @cellXfs[s.to_i].to_i
+    result = @numFmts[id]
+
+    unless result == nil
+      if STANDARD_FORMATS.has_key? id
+        result = FORMATS[STANDARD_FORMATS[id]]
+      end
+    end
+
+    result.downcase
+  end
+
+  def format2type(format)
+    if FORMATS.has_key? format
+      FORMATS[format]
+    elsif @user_defined_formats.has_key? format
+      @user_defined_formats[format]
+    else
+      :float
+    end
   end
 
   def zipfs
@@ -73,8 +191,9 @@ class Dullard::Sheet
             column = 0
             next
           when "c"
-            if node.attributes['s'] && node.attributes['s'] == "1"
-              cell_type = 'date'
+            if node.attributes['t'] != 's' && node.attributes['t'] != 'b'
+              cell_format_index = node.attributes['s'].to_i
+              cell_type = @workbook.format2type(@workbook.attribute2format(cell_format_index))
             end
 
             rcolumn = node.attributes["r"]
@@ -99,9 +218,17 @@ class Dullard::Sheet
 
         if value
           case cell_type
-          when 'date'
-            value = (Date.parse('1900-01-01') + value.to_f).strftime("%Y-%m-%d %H:%M:%S") # Date conversion
+            when :datetime
+            when :time
+            when :date
+              value = (Date.parse('1900-01-01') + value.to_f).strftime("%Y-%m-%d %H:%M:%S") # Date conversion
+            when :percentage # ? TODO
+            when :float
+              value = value.to_f
+            else
+              # leave as string
           end
+          cell_type = nil
 
           row << (shared ? string_lookup(value.to_i) : value)
         end
