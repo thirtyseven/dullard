@@ -132,9 +132,9 @@ FORMATS = {
     id = @cellXfs[s.to_i].to_i
     result = @numFmts[id]
 
-    unless result == nil
+    if result == nil
       if STANDARD_FORMATS.has_key? id
-        result = FORMATS[STANDARD_FORMATS[id]]
+        result = STANDARD_FORMATS[id]
       end
     end
 
