@@ -174,6 +174,10 @@ class Dullard::Sheet
     @workbook.string_table[i]
   end
 
+  def row_count
+    return rows_size
+  end
+
   def rows
     Enumerator.new(rows_size) do |y|
       next unless @file

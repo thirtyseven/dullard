@@ -26,11 +26,7 @@ describe "dullard," do
     end
 
     it "reads the right number of rows" do
-      count = 0
-      @xlsx.sheets[0].rows.each do |row|
-        count += 1
-      end
-      count.should == 117
+      @xlsx.sheets[0].row_count.should == 117
     end
 
     it "reads the right number of rows from the metadata when present" do
