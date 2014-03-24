@@ -5,7 +5,9 @@ require 'pp'
 module Dullard; end
 
 class Dullard::Workbook
-FORMATS = {
+  # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
+  # Some additional formats added by Paul Hendryx that are common in LibreOffice.
+  FORMATS = {
     'general' => :float,
     '0' => :float,
     '0.00' => :float,
@@ -127,6 +129,8 @@ FORMATS = {
     return @numFmts, @cellXfs
   end
 
+  
+  # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
   # convert internal excelx attribute to a format
   def attribute2format(s)
     id = @cellXfs[s.to_i].to_i
@@ -141,6 +145,7 @@ FORMATS = {
     result.downcase
   end
 
+  # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
   def format2type(format)
     if FORMATS.has_key? format
       FORMATS[format]
