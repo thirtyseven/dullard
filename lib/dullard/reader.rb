@@ -230,7 +230,7 @@ class Dullard::Sheet
             when :datetime
             when :time
             when :date
-              value = (Date.parse('1900-01-01') + value.to_f).strftime("%Y-%m-%d %H:%M:%S") # Date conversion
+              value = (Date.parse('1900-01-01') + value.to_f)
             when :percentage # ? TODO
             when :float
               value = value.to_f
