@@ -6,7 +6,7 @@ module Dullard; end
 
 class Dullard::Workbook
   # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
-  # Some additional formats added by Paul Hendryx that are common in LibreOffice.
+  # Some additional formats added by Paul Hendryx (phendryx@gmail.com) that are common in LibreOffice.
   FORMATS = {
     'general' => :float,
     '0' => :float,
