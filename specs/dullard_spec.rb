@@ -39,7 +39,10 @@ describe "dullard," do
         count += 1
 
         if count == 116
-          row.should == ["2012-10-20 00:00:00", "2012-10-20 00:17:58", "2012-07-03 21:18:48", "2012-07-03 21:18:52"]
+          row[0].strftime("%Y-%m-%d %H:%M:%S").should == "2012-10-18 00:00:00"
+          row[1].strftime("%Y-%m-%d %H:%M:%S").should == "2012-10-18 00:17:58"
+          row[2].strftime("%Y-%m-%d %H:%M:%S").should == "2012-07-01 21:18:48"
+          row[3].strftime("%Y-%m-%d %H:%M:%S").should == "2012-07-01 21:18:52"
         end
       end
       count.should == 117
@@ -57,7 +60,11 @@ describe "dullard," do
         count += 1
 
         if count == 117
-          row.should == ["teststring", "2012-10-20 00:00:00", "2012-10-20 00:17:58", "2012-07-03 21:18:48", "2012-07-03 21:18:52"]
+          row[0].should == 'teststring'
+          row[1].strftime("%Y-%m-%d %H:%M:%S").should == "2012-10-18 00:00:00"
+          row[2].strftime("%Y-%m-%d %H:%M:%S").should == "2012-10-18 00:17:58"
+          row[3].strftime("%Y-%m-%d %H:%M:%S").should == "2012-07-01 21:18:48"
+          row[4].strftime("%Y-%m-%d %H:%M:%S").should == "2012-07-01 21:18:52"
         end
       end
       count.should == 117
