@@ -1,6 +1,5 @@
 require 'zip/filesystem'
 require 'nokogiri'
-require 'pp'
 
 module Dullard; end
 
@@ -111,30 +110,27 @@ class Dullard::Workbook
   def read_styles
     doc = Nokogiri::XML(@zipfs.file.open("xl/styles.xml"))
     
-    @numFmts = {}
-    @cellXfs = []
-    fonts = []
+    @num_formats = {}
+    @cell_xfs = []
     
     doc.css('/styleSheet/numFmts/numFmt').each do |numFmt|
       numFmtId = numFmt.attributes['numFmtId'].value.to_i
       formatCode = numFmt.attributes['formatCode'].value
-      @numFmts[numFmtId] = formatCode
+      @num_formats[numFmtId] = formatCode
     end
 
     doc.css('/styleSheet/cellXfs/xf').each do |xf|
       numFmtId = xf.attributes['numFmtId'].value.to_i
-      @cellXfs << numFmtId
+      @cell_xfs << numFmtId
     end
-
-    return @numFmts, @cellXfs
   end
 
   
   # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
   # convert internal excelx attribute to a format
   def attribute2format(s)
-    id = @cellXfs[s.to_i].to_i
-    result = @numFmts[id]
+    id = @cell_xfs[s.to_i].to_i
+    result = @num_formats[id]
 
     if result == nil
       if STANDARD_FORMATS.has_key? id
@@ -179,12 +175,8 @@ class Dullard::Sheet
     @workbook.string_table[i]
   end
 
-  def row_count
-    return rows_size
-  end
-
   def rows
-    Enumerator.new(rows_size) do |y|
+    Enumerator.new(row_count) do |y|
       next unless @file
       @file.rewind
       shared = false
@@ -260,14 +252,9 @@ class Dullard::Sheet
     end
   end
 
-  private
-  def path
-    "xl/worksheets/sheet#{@index}.xml"
-  end
-
-  def rows_size
-    if defined? @rows_size
-      @rows_size
+  def row_count
+    if defined? @row_count
+      @row_count
     elsif @file
       @file.rewind
       Nokogiri::XML::Reader(@file).each do |node|
@@ -275,13 +262,19 @@ class Dullard::Sheet
           case node.name
           when "dimension"
             if ref = node.attributes["ref"]
-              break @rows_size = ref.scan(/\d+$/).first.to_i
+              break @row_count = ref.scan(/\d+$/).first.to_i
             end
           when "sheetData"
-            break @rows_size = nil
+            break @row_count = nil
           end
         end
       end
     end
   end
+
+  private
+  def path
+    "xl/worksheets/sheet#{@index}.xml"
+  end
+
 end
