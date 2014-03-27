@@ -1,4 +1,4 @@
-require 'zip/zipfilesystem'
+require 'zip/filesystem'
 require 'nokogiri'
 
 module Dullard; end
@@ -6,7 +6,7 @@ module Dullard; end
 class Dullard::Workbook
   def initialize(file)
     @file = file
-    @zipfs = Zip::ZipFile.open(@file)
+    @zipfs = Zip::File.open(@file)
   end
 
   def sheets

@@ -15,7 +15,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = Dullard::VERSION
 
-  gem.add_development_dependency "rspec", "~> 2.6"
-  gem.add_dependency "nokogiri", "~> 1.5"
-  gem.add_dependency "rubyzip", "~> 0.9.6"
+  gem.add_development_dependency "rspec", "~> 2.14"
+  gem.add_dependency "nokogiri", "~> 1.6"
+  gem.add_dependency "rubyzip", "~> 1.1"
 end
