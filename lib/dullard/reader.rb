@@ -229,22 +229,22 @@ class Dullard::Sheet
           end
           next
         end
-        value = node.value
 
-        if value
+        if node.value
+          value = (shared ? string_lookup(value.to_i) : value)
           case cell_type
             when :datetime
             when :time
             when :date
-              value = (DateTime.new(1899,12,30) + value.to_f)
+              value = (DateTime.new(1899,12,30) + node.value.to_f)
             when :percentage # ? TODO
             when :float
-              value = value.to_f
+              value = node.value.to_f
             else
               # leave as string
           end
           cell_type = nil
-          cell_map[column] = (shared ? string_lookup(value.to_i) : value)
+          cell_map[column] = value
         end
       end
     end
