@@ -1,3 +1,5 @@
+# dullard
+
 Super simple, super fast stream-based XLSX parsing.  Suitable for very large
 files.
 
@@ -9,3 +11,8 @@ Requires Ruby 2.0.
     workbook.sheets[0].rows.each do |row|
       puts row # => ["a","b","c",...]
     end
+
+## Current limitations
+ * No validation
+ * Limited error handling
+ * May be buggy.  Pull requests welcome!
