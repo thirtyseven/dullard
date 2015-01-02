@@ -1,6 +1,6 @@
 require 'dullard'
 
-describe "dullard," do
+describe "test.xlsx," do
   before(:each) do
     @file = File.open(File.expand_path("../test.xlsx", __FILE__))
   end
@@ -22,7 +22,6 @@ describe "dullard," do
       rows = @xlsx.sheets[0].rows
       rows.next.count.should == 300
       rows.next.count.should == 9
-      rows.next.count.should == 1
     end
 
     it "reads the right number of rows" do
@@ -69,5 +68,20 @@ describe "dullard," do
       end
       count.should == 117
     end
+  end
+end
+
+describe "test2.xlsx" do
+  before(:each) do
+    @file = File.open(File.expand_path("../test2.xlsx", __FILE__))
+  end
+
+  it "should not skip nils" do
+    rows = Dullard::Workbook.new(@file).sheets[0].rows.to_a
+    rows.should == [
+      [1],
+      [nil, 2],
+      [nil, nil, 3]
+    ]
   end
 end

@@ -181,6 +181,7 @@ class Dullard::Sheet
       @file.rewind
       shared = false
       row = nil
+      cell_map = nil # Map of column letter to cell value for a row
       column = nil
       cell_type = nil
       Nokogiri::XML::Reader(@file).each do |node|
@@ -188,8 +189,7 @@ class Dullard::Sheet
         when Nokogiri::XML::Reader::TYPE_ELEMENT
           case node.name
           when "row"
-            row = []
-            column = 0
+            cell_map = {}
             next
           when "c"
             if node.attributes['t'] != 's' && node.attributes['t'] != 'b'
@@ -200,20 +200,16 @@ class Dullard::Sheet
             rcolumn = node.attributes["r"]
             if rcolumn
               rcolumn.delete!("0-9")
-              while column < self.class.column_names.size and rcolumn != self.class.column_names[column]
-                row << nil
-                column += 1
-              end
+              column = rcolumn
             end
             shared = (node.attribute("t") == "s")
-            column += 1
             next
           end
         when Nokogiri::XML::Reader::TYPE_END_ELEMENT
           if node.name == "row"
-            y << row
-            next
+            y << process_row(cell_map)
           end
+          next
         end
         value = node.value
 
@@ -230,12 +226,28 @@ class Dullard::Sheet
               # leave as string
           end
           cell_type = nil
-
-          row << (shared ? string_lookup(value.to_i) : value)
+          cell_map[column] = (shared ? string_lookup(value.to_i) : value)
         end
       end
     end
   end
+
+  def process_row(cell_map)
+    max = cell_map.keys.map {|c| self.class.column_name_to_index c }.max
+    row = []
+    self.class.column_names[0..max].each do |col|
+      #p "%s, %s, %s" % [col, max, cell_map[col]]
+      #p self.class.column_name_to_index col
+      if self.class.column_name_to_index(col) > max
+        break
+      else
+        row << cell_map[col]
+      end
+    end
+    row
+  end
+
+
 
   # Returns A to ZZZ.
   def self.column_names
@@ -250,6 +262,16 @@ class Dullard::Sheet
       z = y.map(&proc).flatten
       @column_names = x + y + z
     end
+  end
+
+  def self.column_name_to_index(name)
+    if not @column_names_to_indices
+      @column_names_to_indices = {}
+      self.column_names.each_with_index do |name, i|
+        @column_names_to_indices[name] = i
+      end
+    end
+    @column_names_to_indices[name]
   end
 
   def row_count
