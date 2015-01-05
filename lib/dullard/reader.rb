@@ -17,8 +17,8 @@ class Dullard::Workbook
     '0.00' => :float,
     '#,##0' => :float,
     '#,##0.00' => :float,
-    '0%' => :percentage,
-    '0.00%' => :percentage,
+    '0%' => :float,
+    '0.00%' => :float,
     '0.00E+00' => :float,
     '# ?/?' => :float, #??? TODO:
     '# ??/??' => :float, #??? TODO:
@@ -257,7 +257,6 @@ class Dullard::Sheet
             when :time
             when :date
               value = (Dullard::OOXMLEpoch + node.value.to_f)
-            when :percentage # ? TODO
             when :float
               value = node.value.to_f
             else
