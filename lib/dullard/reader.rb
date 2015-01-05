@@ -3,6 +3,7 @@ require 'nokogiri'
 
 module Dullard
   class Error < StandardError; end
+  OOXMLEpoch = DateTime.new(1899,12,30)
 end
 
 class Dullard::Workbook
@@ -236,7 +237,7 @@ class Dullard::Sheet
             when :datetime
             when :time
             when :date
-              value = (DateTime.new(1899,12,30) + node.value.to_f)
+              value = (Dullard::OOXMLEpoch + node.value.to_f)
             when :percentage # ? TODO
             when :float
               value = node.value.to_f
