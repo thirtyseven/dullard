@@ -9,10 +9,11 @@ Requires Ruby 2.0.
 
     workbook = Dullard::Workbook.new "file.xlsx"
     workbook.sheets[0].rows.each do |row|
-      puts row # => ["a","b","c",...]
+      p row # => ["a","b","c", 0.3, #<DateTime: -4712-01-01....>, ...]
     end
 
 ## Current limitations
- * No validation
- * Limited error handling
+ * Limited validation and error handling.
+ * Formatted cells are read, but formatting is not accessible.
  * May be buggy.  Pull requests welcome!
+ * Rows that end with empty cells may be truncated.
