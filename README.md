@@ -14,6 +14,6 @@ Requires Ruby 2.0.
 
 ## Current limitations
  * Limited validation and error handling.
- * Formatted cells are read, but formatting is not accessible.
- * May be buggy.  Pull requests welcome!
+ * Formatted cells are read minus formatting.
  * Rows that end with empty cells may be truncated.
+ * May be buggy.  Pull requests welcome!
