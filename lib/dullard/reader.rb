@@ -6,6 +6,10 @@ module Dullard
   OOXMLEpoch = DateTime.new(1899,12,30)
   SharedStringPath = 'xl/sharedStrings.xml'
   StylesPath = 'xl/styles.xml'
+
+  class Time < Struct.new('Time', :hours, :minutes, :seconds)
+  end
+
 end
 
 class Dullard::Workbook
@@ -26,8 +30,8 @@ class Dullard::Workbook
     'd-mmm-yy' => :date,
     'd-mmm' => :date,
     'mmm-yy' => :date,
-    'h:mm am/pm' => :date,
-    'h:mm:ss am/pm' => :date,
+    'h:mm am/pm' => :time,
+    'h:mm:ss am/pm' => :time,
     'h:mm' => :time,
     'h:mm:ss' => :time,
     'm/d/yy h:mm' => :date,
@@ -160,27 +164,27 @@ class Dullard::Workbook
 
   # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
   # convert internal excelx attribute to a format
-  def attribute2format(s)
-    id = @cell_xfs[s.to_i].to_i
-    result = @num_formats[id]
-
-    if result == nil
-      if STANDARD_FORMATS.has_key? id
-        result = STANDARD_FORMATS[id]
-      end
-    end
-
-    result.downcase
-  end
-
-  # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
-  def format2type(format)
-    if FORMATS.has_key? format
-      FORMATS[format]
-    elsif @user_defined_formats.has_key? format
-      @user_defined_formats[format]
+  def attribute_to_type(t, s)
+    if t == 's'
+      :shared
+    elsif t == 'b'
+      :boolean
     else
-      :float
+      id = @cell_xfs[s.to_i].to_i
+      result = @num_formats[id]
+
+      if result == nil
+        if STANDARD_FORMATS.has_key? id
+          result = STANDARD_FORMATS[id]
+        end
+      end
+      format = result.downcase
+
+      if @user_defined_formats.has_key? format
+        @user_defined_formats[format]
+      else
+        FORMATS[format] || :float
+      end
     end
   end
 
@@ -229,17 +233,13 @@ class Dullard::Sheet
             next
           when 'c'
             node_type = node.attributes['t']
+            node_style = node.attributes['s']
             cell_index = node.attributes['r']
             if !cell_index
               raise Dullard::Error, 'Invalid spreadsheet XML.'
             end
-
-            if node_type != 's' && node_type != 'b'
-              cell_format_index = node.attributes['s'].to_i
-              cell_type = @workbook.format2type(@workbook.attribute2format(cell_format_index))
-            end
-
             column = cell_index.delete('0-9')
+            cell_type = @workbook.attribute_to_type(node_type, node_style)
             shared = (node_type == 's')
             next
           end
@@ -251,22 +251,32 @@ class Dullard::Sheet
         end
 
         if node.value
-          value = (shared ? string_lookup(value.to_i) : value)
-          case cell_type
-            when :datetime
+          value = case cell_type
+            when :shared
+              string_lookup(node.value.to_i)
+            when :boolean
+              node.value.to_i != 0
+            when :datetime, :date
+              Dullard::OOXMLEpoch + node.value.to_f
             when :time
-            when :date
-              value = (Dullard::OOXMLEpoch + node.value.to_f)
+              parse_time(node.value.to_f)
             when :float
-              value = node.value.to_f
+              node.value.to_f
             else
               # leave as string
-          end
-          cell_type = nil
+              node.value
+            end
           cell_map[column] = value
         end
       end
     end
+  end
+
+  def parse_time(float)
+    hours = (float * 24).floor
+    minutes = (float * 24 * 60).floor % 60
+    seconds = (float * 24 * 60 * 60).floor % 60
+    Dullard::Time.new(hours, minutes, seconds)
   end
 
   def process_row(cell_map)
