@@ -16,4 +16,5 @@ Requires Ruby 2.0 or later.
  * Limited validation and error handling.
  * Formatted cells are read minus formatting.
  * Rows that end with empty cells may be truncated.
+ * Less common XLSX features (i.e., inline strings, 1904 date mode) may not work.
  * May be buggy.  Pull requests welcome!
