@@ -50,7 +50,7 @@ class Dullard::Workbook
     'mm/dd/yyyy' => :date,
   }
 
-  STANDARD_FORMATS = { 
+  STANDARD_FORMATS = {
     0 => 'General',
     1 => '0',
     2 => '0.00',
@@ -140,7 +140,7 @@ class Dullard::Workbook
     rescue Zip::Error
       raise Dullard::Error, 'Invalid file, could not open styles'
     end
-    
+
     doc.css('/styleSheet/numFmts/numFmt').each do |numFmt|
       if numFmt.attributes['numFmtId'] && numFmt.attributes['formatCode']
         numFmtId = numFmt.attributes['numFmtId'].value.to_i
@@ -157,7 +157,7 @@ class Dullard::Workbook
     end
   end
 
-  
+
   # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
   # convert internal excelx attribute to a format
   def attribute2format(s)
