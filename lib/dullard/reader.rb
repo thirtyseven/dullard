@@ -178,7 +178,7 @@ class Dullard::Workbook
           result = STANDARD_FORMATS[id]
         end
       end
-      format = result.downcase
+      format = result.downcase.sub('\\', '')
 
       if @user_defined_formats.has_key? format
         @user_defined_formats[format]
