@@ -1,7 +1,9 @@
 require 'zip/filesystem'
 require 'nokogiri'
 
-module Dullard; end
+module Dullard
+  class Error < StandardError; end
+end
 
 class Dullard::Workbook
   # Code borrowed from Roo (https://github.com/hmcgowan/roo/blob/master/lib/roo/excelx.rb)
@@ -78,14 +80,20 @@ class Dullard::Workbook
 
   def initialize(file, user_defined_formats = {})
     @file = file
-    @zipfs = Zip::File.open(@file)
+    begin
+      @zipfs = Zip::File.open(@file)
+    rescue Zip::Error => e
+      raise Dullard::Error, e.message
+    end
     @user_defined_formats = user_defined_formats
     read_styles
   end
 
   def sheets
-    workbook = Nokogiri::XML::Document.parse(@zipfs.file.open("xl/workbook.xml"))
-    @sheets = workbook.css("sheet").each_with_index.map {|n,i| Dullard::Sheet.new(self, n.attr("name"), n.attr("sheetId"), i+1) }
+    workbook = Nokogiri::XML::Document.parse(@zipfs.file.open('xl/workbook.xml'))
+    @sheets = workbook.css('sheet').each_with_index.map do |n, i|
+      Dullard::Sheet.new(self, n.attr('name'), n.attr('sheetId'), i+1)
+    end
   end
 
   def string_table
@@ -114,14 +122,18 @@ class Dullard::Workbook
     @cell_xfs = []
     
     doc.css('/styleSheet/numFmts/numFmt').each do |numFmt|
-      numFmtId = numFmt.attributes['numFmtId'].value.to_i
-      formatCode = numFmt.attributes['formatCode'].value
-      @num_formats[numFmtId] = formatCode
+      if numFmt.attributes['numFmtId'] && numFmt.attributes['formatCode']
+        numFmtId = numFmt.attributes['numFmtId'].value.to_i
+        formatCode = numFmt.attributes['formatCode'].value
+        @num_formats[numFmtId] = formatCode
+      end
     end
 
     doc.css('/styleSheet/cellXfs/xf').each do |xf|
-      numFmtId = xf.attributes['numFmtId'].value.to_i
-      @cell_xfs << numFmtId
+      if xf.attributes['numFmtId']
+        numFmtId = xf.attributes['numFmtId'].value.to_i
+        @cell_xfs << numFmtId
+      end
     end
   end
 
@@ -168,7 +180,11 @@ class Dullard::Sheet
     @name = name
     @id = id
     @index = index
-    @file = @workbook.zipfs.file.open(path) if @workbook.zipfs.file.exist?(path)
+    begin
+      @file = @workbook.zipfs.file.open(path) if @workbook.zipfs.file.exist?(path)
+    rescue Zip::Error => e
+      raise Dullard::Error, "Couldn't open sheet #{index}: #{e.message}"
+    end
   end
 
   def string_lookup(i)
@@ -191,22 +207,24 @@ class Dullard::Sheet
           when "row"
             cell_map = {}
             next
-          when "c"
-            if node.attributes['t'] != 's' && node.attributes['t'] != 'b'
+          when 'c'
+            node_type = node.attributes['t']
+            cell_index = node.attributes['r']
+            if !cell_index
+              raise Dullard::Error, 'Invalid spreadsheet XML.'
+            end
+
+            if node_type != 's' && node_type != 'b'
               cell_format_index = node.attributes['s'].to_i
               cell_type = @workbook.format2type(@workbook.attribute2format(cell_format_index))
             end
 
-            rcolumn = node.attributes["r"]
-            if rcolumn
-              rcolumn.delete!("0-9")
-              column = rcolumn
-            end
-            shared = (node.attribute("t") == "s")
+            column = cell_index.delete('0-9')
+            shared = (node_type == 's')
             next
           end
         when Nokogiri::XML::Reader::TYPE_END_ELEMENT
-          if node.name == "row"
+          if node.name == 'row'
             y << process_row(cell_map)
           end
           next
@@ -236,8 +254,6 @@ class Dullard::Sheet
     max = cell_map.keys.map {|c| self.class.column_name_to_index c }.max
     row = []
     self.class.column_names[0..max].each do |col|
-      #p "%s, %s, %s" % [col, max, cell_map[col]]
-      #p self.class.column_name_to_index col
       if self.class.column_name_to_index(col) > max
         break
       else
@@ -282,11 +298,11 @@ class Dullard::Sheet
       Nokogiri::XML::Reader(@file).each do |node|
         if node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
           case node.name
-          when "dimension"
+          when 'dimension'
             if ref = node.attributes["ref"]
               break @row_count = ref.scan(/\d+$/).first.to_i
             end
-          when "sheetData"
+          when 'sheetData'
             break @row_count = nil
           end
         end
