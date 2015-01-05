@@ -85,3 +85,14 @@ describe "test2.xlsx" do
     ]
   end
 end
+
+describe "error handling" do
+  it "should raise an error when a cell is missing r attr" do
+    @file = File.expand_path("../error_missing_r.xlsx", __FILE__)
+    book = Dullard::Workbook.new(@file)
+    sheet = book.sheets[0]
+    expect {
+      sheet.rows.to_a
+    }.to raise_error(Dullard::Error)
+  end
+end
