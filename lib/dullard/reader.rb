@@ -4,6 +4,8 @@ require 'nokogiri'
 module Dullard
   class Error < StandardError; end
   OOXMLEpoch = DateTime.new(1899,12,30)
+  SharedStringPath = 'xl/sharedStrings.xml'
+  StylesPath = 'xl/styles.xml'
 end
 
 class Dullard::Workbook
@@ -91,20 +93,32 @@ class Dullard::Workbook
   end
 
   def sheets
-    workbook = Nokogiri::XML::Document.parse(@zipfs.file.open('xl/workbook.xml'))
+    begin
+      workbook = Nokogiri::XML::Document.parse(@zipfs.file.open('xl/workbook.xml'))
+    rescue Zip::Error
+      raise Dullard::Error, 'Invalid file, could not open xl/workbook.xml'
+    end
     @sheets = workbook.css('sheet').each_with_index.map do |n, i|
       Dullard::Sheet.new(self, n.attr('name'), n.attr('sheetId'), i+1)
     end
   end
 
   def string_table
-    @string_tabe ||= read_string_table
+    @string_table ||= read_string_table
   end
 
   def read_string_table
-    @string_table = []
+    return [] unless @zipfs.file.exist? Dullard::SharedStringPath
+
+    begin
+      shared_string = @zipfs.file.open(Dullard::SharedStringPath)
+    rescue Zip::Error
+      raise Dullard::Error, 'Invalid file, could not open shared string file.'
+    end
+
     entry = ''
-    Nokogiri::XML::Reader(@zipfs.file.open("xl/sharedStrings.xml")).each do |node|
+    @string_table = []
+    Nokogiri::XML::Reader(shared_string).each do |node|
       if node.name == "si" and node.node_type == Nokogiri::XML::Reader::TYPE_ELEMENT
         entry = ''
       elsif node.name == "si" and node.node_type == Nokogiri::XML::Reader::TYPE_END_ELEMENT
@@ -117,10 +131,15 @@ class Dullard::Workbook
   end
 
   def read_styles
-    doc = Nokogiri::XML(@zipfs.file.open("xl/styles.xml"))
-    
     @num_formats = {}
     @cell_xfs = []
+    return unless @zipfs.file.exist? Dullard::StylesPath
+
+    begin
+      doc = Nokogiri::XML(@zipfs.file.open(Dullard::StylesPath))
+    rescue Zip::Error
+      raise Dullard::Error, 'Invalid file, could not open styles'
+    end
     
     doc.css('/styleSheet/numFmts/numFmt').each do |numFmt|
       if numFmt.attributes['numFmtId'] && numFmt.attributes['formatCode']
@@ -189,7 +208,7 @@ class Dullard::Sheet
   end
 
   def string_lookup(i)
-    @workbook.string_table[i]
+    @workbook.string_table[i] || (raise Dullard::Error, 'File invalid, invalid string table.')
   end
 
   def rows

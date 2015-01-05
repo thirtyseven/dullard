@@ -95,4 +95,22 @@ describe "error handling" do
       sheet.rows.to_a
     }.to raise_error(Dullard::Error)
   end
+
+  it "should succeed when styles are missing" do
+    file = File.expand_path("../error_missing_metadata.xlsx", __FILE__)
+    book = Dullard::Workbook.new(file)
+    sheet = book.sheets[0]
+    expect {
+      sheet.rows.to_a
+    }.not_to raise_error
+  end
+
+  it "should raise an error with invalid shared string index" do
+    file = File.expand_path("../error_missing_ss.xlsx", __FILE__)
+    book = Dullard::Workbook.new(file)
+    sheet = book.sheets[0]
+    expect {
+      sheet.rows.to_a
+    }.to raise_error(Dullard::Error)
+  end
 end
