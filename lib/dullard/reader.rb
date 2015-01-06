@@ -216,7 +216,8 @@ class Dullard::Sheet
   end
 
   def rows
-    Enumerator.new(row_count) do |y|
+    count = row_count
+    e = Enumerator.new do |y|
       next unless @file
       @file.rewind
       shared = false
@@ -270,6 +271,10 @@ class Dullard::Sheet
         end
       end
     end
+    def e.size
+      count
+    end
+    e
   end
 
   def parse_time(float)
