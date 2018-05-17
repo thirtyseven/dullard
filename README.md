@@ -1,5 +1,8 @@
 # dullard
 
+## This gem is no longer maintained  
+Use roo or creek for streaming xlsx parsing.
+
 Super simple, super fast stream-based XLSX parsing.  Suitable for very large
 files.
 
